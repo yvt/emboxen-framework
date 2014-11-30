@@ -18,7 +18,7 @@ type BuildFailedEvent struct{}
 // Sent when building process has failed, but it was not because of the compiled program.
 // This is one of the last event sent during a single connection.
 type BadRequestEvent struct {
-	Message string
+	Error string
 }
 
 // Sent when building process has suceeded, and
