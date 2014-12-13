@@ -8,7 +8,7 @@ type BuildEvent interface{}
 // Sent when buliding program has generated a message useful to
 // the user.
 type BuildOutputEvent struct {
-	Segments []TextSegment
+	Output []byte
 }
 
 // Sent when building process has failed due to compilation error.
@@ -40,7 +40,7 @@ type SendingProgramEvent struct {
 
 // Sent after StartingProgramEvent was sent.
 type ProgramOutputEvent struct {
-	Segments []TextSegment
+	Output []byte
 }
 
 // Sent after SendingProgramEvent was sent.
@@ -63,17 +63,10 @@ const (
 	ElfMipsLittleEndian
 )
 
-type TextSegment struct {
-	Text  string
-	Red   uint8
-	Green uint8
-	Blue  uint8
-	Flags TextSegmentFlags
+// Events below are sent by frontend.
+type BuildRequestEvent interface{}
+
+type SourceCodeFragmentEvent struct {
+	Data []byte
 }
-
-type TextSegmentFlags uint8
-
-const (
-	UseColor TextSegmentFlags = 1 << iota
-	Bold                      = 1 << iota
-)
+type EndOfSourceCodeFragmentEvent struct{}
