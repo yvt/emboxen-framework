@@ -16,5 +16,6 @@ ENV GOPATH /go
 WORKDIR $GOPATH
 
 ADD . /go/src/github.com/yvt/emboxen-framework
-RUN go get && go install github.com/yvt/emboxen-framework
+RUN go get github.com/yvt/emboxen-framework \
+ && go install github.com/yvt/emboxen-framework
 
