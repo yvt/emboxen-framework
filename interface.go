@@ -15,9 +15,17 @@ type BuildOutputEvent struct {
 // This is one of the last event sent during a single connection.
 type BuildFailedEvent struct{}
 
-// Sent when building process has failed, but it was not because of the compiled program.
+// Sent when building process has failed, but it was not because of the compiled program, but
+// caused by the problem of the request.
 // This is one of the last event sent during a single connection.
 type BadRequestEvent struct {
+	Error string
+}
+
+// Sent when building process has failed, but it was not because of the compiled program, but
+// caused by an unexpected error.
+// This is one of the last event sent during a single connection.
+type SystemErrorEvent struct {
 	Error string
 }
 

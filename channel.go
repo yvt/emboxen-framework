@@ -5,15 +5,15 @@ import (
 	"os"
 )
 
-type ControlChannel struct {
+type controlChannel struct {
 	outputChannel chan<- BuildEvent
 	inputChanel   <-chan BuildRequestEvent
 }
 
-var _ctrlChannel ControlChannel
+var _ctrlChannel controlChannel
 var ctrlChannelInitialized bool
 
-func ctrlChannel() *ControlChannel {
+func ctrlChannel() *controlChannel {
 	if ctrlChannelInitialized {
 		return &_ctrlChannel
 	}
@@ -44,7 +44,7 @@ func ctrlChannel() *ControlChannel {
 		g := gob.NewDecoder(os.Stdin)
 		for {
 			var inputEvent BuildRequestEvent
-			err := g.Decode(&inputEvent)
+			err := g.Decode(inputEvent)
 
 			if err != nil {
 				panic(err)

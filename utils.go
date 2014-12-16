@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-func OpenSourceCodeReader(ch *ControlChannel) io.Reader {
+func openSourceCodeReader(ch *controlChannel) io.ReadCloser {
 	rawInput := ch.inputChanel
 	filteredInput := make(chan BuildRequestEvent, 16)
 	ch.inputChanel = filteredInput
@@ -20,7 +20,11 @@ func OpenSourceCodeReader(ch *ControlChannel) io.Reader {
 			}
 			switch evt := evt.(type) {
 			case *SourceCodeFragmentEvent:
-				writer.Write(evt.Data)
+				_, err := writer.Write(evt.Data)
+				if err != nil {
+					// Unexpected closure.
+					panic("Unexpected closure.")
+				}
 			case *EndOfSourceCodeFragmentEvent:
 				writer.Close()
 			default:
@@ -32,8 +36,7 @@ func OpenSourceCodeReader(ch *ControlChannel) io.Reader {
 	return reader
 }
 
-/*
-func openWriterGeneric(ch *ControlChannel) io.Writer {
+func openWriterGeneric(ch *controlChannel, sendChunk func([]byte), endOutput func()) io.WriteCloser {
 	reader, writer := io.Pipe()
 
 	go func() {
@@ -41,9 +44,39 @@ func openWriterGeneric(ch *ControlChannel) io.Writer {
 
 		for {
 			count, err := reader.Read(buf)
-			// TODO: openWriterGeneric
+			if err == io.EOF {
+				reader.Close()
+				endOutput()
+				break
+			}
+			if count > 0 {
+				sendChunk(buf[0:count])
+			}
 		}
 	}()
 
 	return writer
-}*/
+}
+
+func openProgramWriter(ch *controlChannel) io.WriteCloser {
+	return openWriterGeneric(ch, func(p []byte) {
+		ch.outputChannel <- ProgramFragmentEvent{p}
+	}, func() {
+		ch.outputChannel <- EndOfProgramFragmentEvent{}
+	})
+}
+
+// This one does not send "end of ~~~" event.
+func openBuildOutputWriter(ch *controlChannel) io.WriteCloser {
+	return openWriterGeneric(ch, func(p []byte) {
+		ch.outputChannel <- BuildOutputEvent{p}
+	}, func() {})
+}
+
+func openApplicationOutputWriter(ch *controlChannel) io.WriteCloser {
+	return openWriterGeneric(ch, func(p []byte) {
+		ch.outputChannel <- ProgramOutputEvent{p}
+	}, func() {
+		ch.outputChannel <- EndOfProgramOutputEvent{}
+	})
+}
