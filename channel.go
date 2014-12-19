@@ -1,7 +1,9 @@
 package emboxen
 
 import (
+	"bytes"
 	"encoding/gob"
+	"io"
 	"os"
 )
 
@@ -25,15 +27,30 @@ func ctrlChannel() *controlChannel {
 	_ctrlChannel.inputChanel = inputChannel
 
 	go func() {
-		g := gob.NewEncoder(os.Stdout)
+		buf := &bytes.Buffer{}
+		cout := os.Stdout
+		lenbuf := [4]byte{}
 		for {
 			outputEvent := <-outputChannel
 			if outputEvent == nil {
 				return
 			}
 
-			err := g.Encode(outputEvent)
+			buf.Reset()
+			buf.Write(lenbuf[0:]) // placeholder for chunk length
+			g := gob.NewEncoder(buf)
+			err := g.Encode(&outputEvent)
+			if err != nil {
+				panic(err)
+			}
 
+			p := buf.Bytes()
+			ln := len(p) - 4
+			p[0] = byte(ln)
+			p[1] = byte(ln >> 8)
+			p[2] = byte(ln >> 16)
+			p[3] = byte(ln >> 24)
+			_, err = cout.Write(p)
 			if err != nil {
 				panic(err)
 			}
@@ -41,10 +58,19 @@ func ctrlChannel() *controlChannel {
 	}()
 
 	go func() {
-		g := gob.NewDecoder(os.Stdin)
+		lenbuf := [4]byte{}
+		cin := os.Stdin
 		for {
+			_, err := io.ReadFull(cin, lenbuf[0:])
+			if err != nil {
+				panic(err)
+			}
+
+			ln := int(lenbuf[0]) | int(lenbuf[1])<<8 | int(lenbuf[2])<<16 | int(lenbuf[3])<<24
+
 			var inputEvent BuildRequestEvent
-			err := g.Decode(inputEvent)
+			g := gob.NewDecoder(io.LimitReader(cin, int64(ln)))
+			err = g.Decode(&inputEvent)
 
 			if err != nil {
 				panic(err)

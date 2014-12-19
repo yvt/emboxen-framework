@@ -1,5 +1,7 @@
 package emboxen
 
+import "encoding/gob"
+
 // This packages defines events sent from building
 // environment to the Emboxen engine.
 
@@ -78,3 +80,18 @@ type SourceCodeFragmentEvent struct {
 	Data []byte
 }
 type EndOfSourceCodeFragmentEvent struct{}
+
+func init() {
+	gob.Register(BuildOutputEvent{})
+	gob.Register(BuildFailedEvent{})
+	gob.Register(BadRequestEvent{})
+	gob.Register(SystemErrorEvent{})
+	gob.Register(StartingProgramEvent{})
+	gob.Register(SendingProgramEvent{})
+	gob.Register(ProgramOutputEvent{})
+	gob.Register(ProgramFragmentEvent{})
+	gob.Register(EndOfProgramOutputEvent{})
+	gob.Register(EndOfProgramFragmentEvent{})
+	gob.Register(SourceCodeFragmentEvent{})
+	gob.Register(EndOfSourceCodeFragmentEvent{})
+}
