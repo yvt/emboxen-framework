@@ -10,6 +10,7 @@ import (
 type controlChannel struct {
 	outputChannel chan<- BuildEvent
 	inputChanel   <-chan BuildRequestEvent
+	waitForFlush  <-chan struct{}
 }
 
 var _ctrlChannel controlChannel
@@ -26,6 +27,9 @@ func ctrlChannel() *controlChannel {
 	inputChannel := make(chan BuildRequestEvent, 16)
 	_ctrlChannel.inputChanel = inputChannel
 
+	waitForFlush := make(chan struct{}, 1)
+	_ctrlChannel.waitForFlush = waitForFlush
+
 	go func() {
 		buf := &bytes.Buffer{}
 		cout := os.Stdout
@@ -33,6 +37,8 @@ func ctrlChannel() *controlChannel {
 		for {
 			outputEvent := <-outputChannel
 			if outputEvent == nil {
+				waitForFlush <- struct{}{}
+				close(waitForFlush)
 				return
 			}
 
@@ -72,7 +78,7 @@ func ctrlChannel() *controlChannel {
 			g := gob.NewDecoder(io.LimitReader(cin, int64(ln)))
 			err = g.Decode(&inputEvent)
 
-			if err != nil {
+			if err != nil || inputEvent == nil {
 				panic(err)
 			}
 

@@ -4,29 +4,41 @@ import (
 	"io"
 )
 
+func markEndOfOutput(ch *controlChannel) {
+	go func() {
+		close(ch.outputChannel)
+	}()
+	<-ch.waitForFlush
+}
+
 func openSourceCodeReader(ch *controlChannel) io.ReadCloser {
 	rawInput := ch.inputChanel
 	filteredInput := make(chan BuildRequestEvent, 16)
 	ch.inputChanel = filteredInput
 
 	reader, writer := io.Pipe()
+	closed := false
 
 	go func() {
 		for {
 			evt := <-rawInput
 			if evt == nil {
 				close(filteredInput)
+				if !closed {
+					panic("Unexpected closure.")
+				}
 				return
 			}
 			switch evt := evt.(type) {
-			case *SourceCodeFragmentEvent:
+			case SourceCodeFragmentEvent:
 				_, err := writer.Write(evt.Data)
 				if err != nil {
 					// Unexpected closure.
 					panic("Unexpected closure.")
 				}
-			case *EndOfSourceCodeFragmentEvent:
+			case EndOfSourceCodeFragmentEvent:
 				writer.Close()
+				closed = true
 			default:
 				filteredInput <- evt
 			}

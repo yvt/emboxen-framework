@@ -110,10 +110,12 @@ func (self *buildOutputWriter) ReportInternalError(e interface{}) {
 	}
 	self.writer.Close()
 	self.writer = nil
+	markEndOfOutput(self.ch)
 }
 func (self *buildOutputWriter) CloseWithFailure() {
 	self.innerClose()
 	self.ch.outputChannel <- BuildFailedEvent{}
+	markEndOfOutput(self.ch)
 }
 func (self *buildOutputWriter) CloseAndOpenProgramWriter(programType ClientSideProgramType) ProgramWriter {
 	self.innerClose()
@@ -123,6 +125,7 @@ func (self *buildOutputWriter) CloseAndOpenProgramWriter(programType ClientSideP
 	return &genericWriteCloser{
 		writer: openProgramWriter(self.ch),
 		ch:     self.ch,
+		final:  true,
 	}
 }
 func (self *buildOutputWriter) CloseAndOpenApplicationOutputWriter() ApplicationOutputWriter {
@@ -131,12 +134,14 @@ func (self *buildOutputWriter) CloseAndOpenApplicationOutputWriter() Application
 	return &genericWriteCloser{
 		writer: openApplicationOutputWriter(self.ch),
 		ch:     self.ch,
+		final:  true,
 	}
 }
 
 type genericWriteCloser struct {
 	writer io.WriteCloser
 	ch     *controlChannel
+	final  bool
 }
 
 func (self *genericWriteCloser) Write(p []byte) (n int, err error) {
@@ -152,6 +157,9 @@ func (self *genericWriteCloser) Close() error {
 	}
 	r := self.writer.Close()
 	self.writer = nil
+	if self.final {
+		markEndOfOutput(self.ch)
+	}
 	return r
 }
 func (self *genericWriteCloser) ReportInternalError(e interface{}) {
